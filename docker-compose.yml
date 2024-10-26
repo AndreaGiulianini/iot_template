@@ -1,0 +1,101 @@
+services:
+  mqtt:
+    image: eclipse-mosquitto
+    ports:
+      - "1883:1883"   # Port MQTT
+      - "9001:9001"   # Port WebSocket (optional)
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    networks:
+      - my-network
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false  # Disable security
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    networks:
+      - my-network
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.15.3
+    container_name: logstash
+    environment:
+      - xpack.monitoring.enabled=false  # Disable monitoring
+    ports:
+      - "5044:5044"
+    volumes:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    depends_on:
+      - mqtt
+      - elasticsearch
+    networks:
+      - my-network
+  
+  mqtt_to_logstash:
+    build: ./mqtt_to_logstash
+    container_name: mqtt_to_logstash
+    depends_on:
+      - mqtt
+      - logstash
+    command: python /app/mqtt_to_logstash.py
+    networks:
+      - my-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.3
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - xpack.security.enabled=false  # Disable security
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - my-network
+
+  web:
+    build: ./web
+    ports:
+      - "3000:3000"
+    networks:
+      - my-network
+    volumes:
+      - ./web:/app
+    depends_on:
+      - mqtt
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    command:
+      - "start"
+      - "--all"
+      - "--config"
+      - "/etc/ngrok.yml"
+    ports:
+      - "4040:4040"
+    networks:
+      - my-network
+    volumes:
+      - ./ngrok.yml:/etc/ngrok.yml
+    depends_on:
+      - web
+      - mqtt
+
+networks:
+  my-network:
+    driver: bridge
+
+volumes:
+  mosquitto_data:
+  mosquitto_log:
+  es_data:

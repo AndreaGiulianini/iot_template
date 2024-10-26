@@ -1,0 +1,13 @@
+version: "2"
+authtoken: "YOUR_TOKEN"  # Your authtoken from Ngrok
+tunnels:
+  http-tunnel:
+    proto: http
+    addr: web:3000
+  tcp-tunnel:
+    proto: tcp
+    addr: mqtt:1883
+  ws-tunnel:
+    proto: tcp
+    addr: mqtt:9001
+    

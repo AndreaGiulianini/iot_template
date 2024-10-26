@@ -1,0 +1,15 @@
+{
+  "name": "api",
+  "version": "1.0.0",
+  "description": "Mockup app con Fastify e Redis Pub/Sub",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "fastify": "^5.0.0",
+    "mqtt": "^5.10.1"
+  }
+}
+  
